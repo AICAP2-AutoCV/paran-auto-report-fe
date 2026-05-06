@@ -461,3 +461,39 @@ body {
 }
 .spin.dark { border-color: var(--gray-200); border-top-color: var(--blue-600); }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Profile button & modal ──────────────────────────────────────── */
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+
+.profile-btn {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  border: 1.5px solid var(--gray-200);
+  background: var(--gray-50);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--gray-500);
+  transition: border-color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.profile-btn:hover { border-color: var(--blue-400); background: var(--blue-50); color: var(--blue-600); }
+.profile-btn svg { width: 17px; height: 17px; stroke: currentColor; }
+
+.modal-sm { max-width: 420px; width: 100%; }
+
+.profile-hint {
+  font-size: 13px;
+  color: var(--gray-500);
+  margin-bottom: 18px;
+  line-height: 1.6;
+}
+
+.profile-form { display: flex; flex-direction: column; gap: 10px; }
+.profile-form label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gray-400);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: -4px;
+}
