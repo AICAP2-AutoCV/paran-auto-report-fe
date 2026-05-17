@@ -80,7 +80,7 @@ async function sendMessage() {
   appendUserMsg(topic);
 
   const dateParams = extractDateParams(topic);
-  const req = { topic, k: 10, session_id: `web-${Date.now()}`, ...dateParams };
+  const req = { topic, k: 10, session_id: `web-${Date.now()}`, ...dateParams, role: userInfo.role || undefined };
 
   const loadRow = appendLoadingMsg();
   try {

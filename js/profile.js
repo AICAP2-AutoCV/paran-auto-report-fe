@@ -22,6 +22,7 @@ function openProfileModal(isOnboarding) {
   document.getElementById('pDept').value      = userInfo.department || '';
   document.getElementById('pStudentId').value = userInfo.student_id || '';
   document.getElementById('pName').value      = userInfo.name       || '';
+  document.getElementById('pRole').value      = userInfo.role       || '';
   document.getElementById('profileOverlay').classList.add('open');
 }
 
@@ -35,6 +36,7 @@ function saveUserInfo() {
     department: document.getElementById('pDept').value.trim(),
     student_id: document.getElementById('pStudentId').value.trim(),
     name:       document.getElementById('pName').value.trim(),
+    role:       document.getElementById('pRole').value.trim(),
   };
   localStorage.setItem('user_info', JSON.stringify(userInfo));
   updateProfileBtn();

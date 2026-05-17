@@ -83,6 +83,7 @@ async function exportDoc(md, format, title, author, images = []) {
       student_id: userInfo.student_id || undefined,
       department: userInfo.department || undefined,
       team_name:  userInfo.team_name  || undefined,
+      role:       userInfo.role       || undefined,
       images,
     }),
   });
