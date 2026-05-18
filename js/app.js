@@ -3,8 +3,6 @@
 ================================================================ */
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('apiUrlInput').value = API_BASE;
-  document.getElementById('apiLabel').textContent = API_BASE.replace(/^https?:\/\//, '').slice(0, 28);
   appendWelcome();
   checkHealth();
   bindEvents();
@@ -12,22 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function bindEvents() {
-  // API badge
-  document.getElementById('apiBadge').addEventListener('click', e => {
-    e.stopPropagation();
-    document.getElementById('apiPopover').classList.toggle('open');
-  });
-  document.addEventListener('click', () => {
-    document.getElementById('apiPopover').classList.remove('open');
-  });
-  document.getElementById('apiPopover').addEventListener('click', e => e.stopPropagation());
-
-  document.getElementById('apiUrlInput').addEventListener('change', function () {
-    API_BASE = this.value.replace(/\/$/, '');
-    document.getElementById('apiLabel').textContent = API_BASE.replace(/^https?:\/\//, '').slice(0, 28);
-    checkHealth();
-  });
-
   // 전송
   document.getElementById('sendBtn').addEventListener('click', sendMessage);
   document.getElementById('chatInput').addEventListener('keydown', e => {
@@ -64,6 +46,11 @@ function bindEvents() {
     const fmt = document.getElementById('previewFmt').value;
     await withLoading(btn, () => exportDoc(previewMd, fmt, '보고서', '', previewImages));
   });
+
+  document.getElementById('previewFileBtn').addEventListener('click', async function () {
+    document.getElementById('previewOverlay').classList.remove('open');
+    await openDocPreview(previewMd, previewImages, this);
+  });
 }
 
 /* ── 메시지 전송 ──────────────────────────────────────────────── */
@@ -80,7 +67,14 @@ async function sendMessage() {
   appendUserMsg(topic);
 
   const dateParams = extractDateParams(topic);
-  const req = { topic, k: 10, session_id: `web-${Date.now()}`, ...dateParams, role: userInfo.role || undefined };
+  const req = {
+    topic, k: 10, session_id: `web-${Date.now()}`, ...dateParams,
+    role:       userInfo.role       || undefined,
+    team_name:  userInfo.team_name  || undefined,
+    student_id: userInfo.student_id || undefined,
+    department: userInfo.department || undefined,
+    name:       userInfo.name       || undefined,
+  };
 
   const loadRow = appendLoadingMsg();
   try {

@@ -98,6 +98,22 @@ async function exportDoc(md, format, title, author, images = []) {
   URL.revokeObjectURL(url);
 }
 
+async function addGlossary(md) {
+  const r = await fetch(`${API_BASE}/report/glossary`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      markdown: md,
+      session_id: `web-glossary-${Date.now()}`,
+    }),
+  });
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    throw new Error(`HTTP ${r.status}: ${t.slice(0, 120)}`);
+  }
+  return r.json();
+}
+
 async function submitFeedback(traceId, score, comment) {
   const r = await fetch(`${API_BASE}/feedback`, {
     method: 'POST',

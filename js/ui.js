@@ -24,23 +24,37 @@ async function withLoading(btn, fn) {
 /* ── 메시지 빌더 ──────────────────────────────────────────────── */
 
 function appendWelcome() {
-  const row = document.createElement('div');
-  row.className = 'msg-row ai';
-  row.innerHTML = `
-    <div class="avatar">AI</div>
-    <div class="msg-body">
-      <span class="msg-name">AI 어시스턴트</span>
-      <div class="bubble">
-        안녕하세요! <strong>보고서 생성 AI</strong>입니다.<br/>
-        Notion 데이터를 RAG로 검색해 보고서를 자동 작성합니다.<br/><br/>
-        자유롭게 입력해 주세요:<br/>
-        • <em>이번 주 업무 현황 요약해줘</em><br/>
-        • <em>최근 2주 RAG 프로젝트 성과 보고서</em><br/>
-        • <em>지난달 주요 활동 정리</em>
+  const hero = document.createElement('div');
+  hero.className = 'welcome-hero';
+  hero.innerHTML = `
+    <div class="hero-icon-wrap">
+      <svg fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+        <rect x="3" y="3" width="18" height="18" rx="3"/>
+        <path d="M8 12h8M8 8h8M8 16h4"/>
+      </svg>
+    </div>
+    <div>
+      <div class="hero-title">파RAG학기에 오신 것을 환영합니다</div>
+      <div class="hero-desc" style="margin-top:8px">Notion 데이터를 기반으로 AI가 자동으로 보고서를 작성합니다. 아래 버튼을 클릭하거나 직접 입력해 보세요.</div>
+    </div>
+    <div class="hero-features">
+      <div class="hero-feat">
+        <div class="hero-feat-icon blue">🔍</div>
+        <div class="hero-feat-name">RAG 검색</div>
+        <div class="hero-feat-desc">Notion 데이터를 의미 기반으로 검색</div>
       </div>
-      <span class="msg-time">${now()}</span>
+      <div class="hero-feat">
+        <div class="hero-feat-icon green">📄</div>
+        <div class="hero-feat-name">자동 보고서</div>
+        <div class="hero-feat-desc">주제와 기간을 입력하면 즉시 생성</div>
+      </div>
+      <div class="hero-feat">
+        <div class="hero-feat-icon purple">🎓</div>
+        <div class="hero-feat-name">맞춤 재생성</div>
+        <div class="hero-feat-desc">학과별 스타일로 재구성</div>
+      </div>
     </div>`;
-  msgs().appendChild(row);
+  msgs().appendChild(hero);
 }
 
 function appendUserMsg(text) {
@@ -113,44 +127,57 @@ function appendReportCard(md, topic, dateParams, traceId = '', images = []) {
     <div class="msg-body wide">
       <span class="msg-name">AI 어시스턴트</span>
       <div class="card">
-        <div class="card-title">📄 보고서가 생성되었습니다</div>
-        <div class="card-row">
-          <span class="card-lbl">주제</span>
-          <span class="card-val">${esc(topic.slice(0, 60))}</span>
-        </div>
-        <div class="card-row">
-          <span class="card-lbl">날짜 범위</span>
-          <span class="card-val">${esc(dateLabel)}</span>
-        </div>
-        <div class="card-row">
-          <span class="card-lbl">생성 시각</span>
-          <span class="card-val">${new Date().toLocaleString('ko-KR',{hour12:false})}</span>
-        </div>
-        <div class="card-row">
-          <span class="card-lbl">관련 이미지</span>
-          <span class="card-val">${images?.length ? `${images.length}개 포함` : '없음'}</span>
-        </div>
-        <div class="icon-bar">
-          <button class="icon-btn" data-action="preview">
-            <svg fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-            미리보기
+        <div class="card-accent"></div>
+        <div class="card-inner">
+          <div class="card-title">
+            <span>📄 보고서 생성 완료</span>
+            <span class="date-badge">${esc(dateLabel)}</span>
+          </div>
+          <div class="card-meta-grid">
+            <div class="card-row">
+              <span class="card-lbl">주제</span>
+              <span class="card-val">${esc(topic.slice(0, 60))}</span>
+            </div>
+            <div class="card-row">
+              <span class="card-lbl">생성 시각</span>
+              <span class="card-val">${new Date().toLocaleString('ko-KR',{hour12:false})}</span>
+            </div>
+            <div class="card-row">
+              <span class="card-lbl">관련 이미지</span>
+              <span class="card-val">${images?.length ? `${images.length}개 포함` : '없음'}</span>
+            </div>
+          </div>
+          <label class="glossary-toggle">
+            <input type="checkbox" id="${cid}_glossary" />
+            용어 해설 추가
+            <span id="${cid}_glossarySpin" style="display:none"><div class="spin" style="width:12px;height:12px;border-width:2px;"></div></span>
+          </label>
+          <div class="icon-bar">
+            <button class="icon-btn" data-action="preview">
+              <svg fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              미리보기
+            </button>
+            <button class="icon-btn" data-action="download">
+              <svg fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              다운로드
+            </button>
+            <button class="icon-btn" data-action="feedback">
+              <svg fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              피드백
+            </button>
+          </div>
+          <button class="regen-btn" data-action="regen">
+            <svg fill="none" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            학과별 맞춤 재생성
           </button>
-          <button class="icon-btn" data-action="download">
-            <svg fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-            다운로드
-          </button>
-          <button class="icon-btn" data-action="feedback">
-            <svg fill="none" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-            피드백
-          </button>
         </div>
-        <button class="btn primary full" data-action="regen">학과 맞춤 재생성 →</button>
       </div>
       <span class="msg-time">${now()}</span>
     </div>`;
 
   row.querySelector('.card').addEventListener('click', e => {
-    const action = e.target.closest('[data-action]')?.dataset.action;
+    const actionBtn = e.target.closest('[data-action]');
+    const action = actionBtn?.dataset.action;
     if (!action) return;
     const cardMd = row.dataset.md;
     const cardImages = parseImages(row.dataset.images);
@@ -160,8 +187,48 @@ function appendReportCard(md, topic, dateParams, traceId = '', images = []) {
     if (action === 'regen')    appendRegenCard(cid);
   });
 
+  const glossaryCheckbox = row.querySelector(`#${cid}_glossary`);
+  const glossarySpin     = row.querySelector(`#${cid}_glossarySpin`);
+  glossaryCheckbox.addEventListener('change', async () => {
+    if (glossaryCheckbox.checked) {
+      if (!row.dataset.originalMd) row.dataset.originalMd = row.dataset.md;
+      glossaryCheckbox.disabled = true;
+      glossarySpin.style.display = 'inline-flex';
+      try {
+        const payload = await addGlossary(row.dataset.md);
+        row.dataset.md = payload.markdown || row.dataset.md;
+        row.dataset.glossaryTerms = JSON.stringify(payload.glossary_terms || []);
+      } catch (err) {
+        appendErrorMsg(err.message || String(err));
+        glossaryCheckbox.checked = false;
+        if (row.dataset.originalMd) row.dataset.md = row.dataset.originalMd;
+      } finally {
+        glossaryCheckbox.disabled = false;
+        glossarySpin.style.display = 'none';
+      }
+    } else {
+      if (row.dataset.originalMd) row.dataset.md = row.dataset.originalMd;
+    }
+  });
+
   msgs().appendChild(row);
   scrollBottom();
+}
+
+async function generateGlossaryForCard(row, btn) {
+  const md = row.dataset.md || '';
+  if (!md.trim()) return;
+
+  try {
+    await withLoading(btn, async () => {
+      const payload = await addGlossary(md);
+      row.dataset.md = payload.markdown || md;
+      row.dataset.glossaryTerms = JSON.stringify(payload.glossary_terms || []);
+      openPreview(row.dataset.md, parseImages(row.dataset.images));
+    });
+  } catch (err) {
+    appendErrorMsg(err.message || String(err));
+  }
 }
 
 /* ── 미리보기 모달 ────────────────────────────────────────────── */
@@ -175,12 +242,68 @@ function parseImages(raw) {
   }
 }
 
+function cleanMdForPreview(md) {
+  return md
+    .replace(/\[TITLE\].*?\[\/TITLE\]\n?/gs, '')
+    .replace(/\[REPORT_HEADER\].*?\[\/REPORT_HEADER\]\n?/gs, '')
+    .replace(/<span\b[^>]*>(.*?)<\/span>/gis, '$1');
+}
+
 function openPreview(md, images = []) {
   previewMd = md;
   previewImages = images;
-  document.getElementById('previewBody').innerHTML = marked.parse(md);
+  document.getElementById('previewBody').innerHTML = marked.parse(cleanMdForPreview(md));
   document.getElementById('previewOverlay').classList.add('open');
 }
+
+/* ── 실제 파일 미리보기 모달 ─────────────────────────────────── */
+
+async function openDocPreview(md, images = [], triggerBtn) {
+  const overlay = document.getElementById('pdfOverlay');
+  const frame   = document.getElementById('pdfFrame');
+  const loading = document.getElementById('pdfLoading');
+
+  frame.style.display = 'none';
+  frame.src = 'about:blank';
+  loading.style.display = 'flex';
+  overlay.classList.add('open');
+
+  try {
+    await withLoading(triggerBtn, async () => {
+      const r = await fetch(`${API_BASE}/document/preview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          markdown:   md,
+          format:     'docx',
+          title:      '보고서',
+          author:     userInfo.name || 'Unknown',
+          student_id: userInfo.student_id || undefined,
+          department: userInfo.department || undefined,
+          team_name:  userInfo.team_name  || undefined,
+          role:       userInfo.role       || undefined,
+          images,
+        }),
+      });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const html = await r.text();
+      loading.style.display = 'none';
+      frame.style.display = 'block';
+      frame.srcdoc = html;
+    });
+  } catch (err) {
+    loading.style.display = 'none';
+    frame.style.display = 'block';
+    frame.srcdoc = `<p style="color:red;padding:20px">미리보기 생성 실패: ${err.message}</p>`;
+  }
+}
+
+document.getElementById('pdfClose').addEventListener('click', () => {
+  document.getElementById('pdfOverlay').classList.remove('open');
+});
+document.getElementById('pdfCloseBtn').addEventListener('click', () => {
+  document.getElementById('pdfOverlay').classList.remove('open');
+});
 
 /* ── 다운로드 카드 ────────────────────────────────────────────── */
 
@@ -193,17 +316,20 @@ function appendDownloadCard(refId) {
     <div class="msg-body">
       <span class="msg-name">AI 어시스턴트</span>
       <div class="card" id="${dlId}">
-        <div class="card-title">보고서 다운로드</div>
-        <div class="card-row">
-          <span class="card-lbl">파일 형식</span>
-          <select class="f-select" id="${dlId}_fmt">
-            <option value="docx">Word (.docx)</option>
-            <option value="pdf">PDF</option>
-          </select>
-        </div>
-        <div class="btn-row">
-          <button class="btn primary" id="${dlId}_ok">다운로드</button>
-          <button class="btn secondary">취소</button>
+        <div class="card-accent"></div>
+        <div class="card-inner">
+          <div class="card-title">보고서 다운로드</div>
+          <div class="card-row">
+            <span class="card-lbl">파일 형식</span>
+            <select class="f-select" id="${dlId}_fmt">
+              <option value="docx">Word (.docx)</option>
+              <option value="pdf">PDF</option>
+            </select>
+          </div>
+          <div class="btn-row">
+            <button class="btn primary" id="${dlId}_ok">다운로드</button>
+            <button class="btn secondary">취소</button>
+          </div>
         </div>
       </div>
     </div>`;
@@ -233,23 +359,26 @@ async function appendRegenCard(refId) {
     <div class="msg-body wide">
       <span class="msg-name">AI 어시스턴트</span>
       <div class="card" id="${dcId}" style="width:440px;">
-        <div class="card-title">학과별 맞춤 재생성</div>
-        <div class="card-row">
-          <span class="card-lbl">소속 학과</span>
-          <select class="f-select" id="${dcId}_dept"><option value="">학과 불러오는 중...</option></select>
-        </div>
-        <div class="card-row">
-          <span class="card-lbl">보고서 날짜</span>
-          <input class="f-input" type="date" id="${dcId}_date" value="${iso(new Date())}" />
-        </div>
-        <div id="${dcId}_progress" style="display:none;">
-          <div class="progress-wrap"><div class="progress-bar" id="${dcId}_bar"></div></div>
-        </div>
-        <div id="${dcId}_result" style="display:none;"></div>
-        <div id="${dcId}_actions">
-          <div class="btn-row">
-            <button class="btn primary" id="${dcId}_go">재생성하기</button>
-            <button class="btn secondary" id="${dcId}_cancel">취소</button>
+        <div class="card-accent"></div>
+        <div class="card-inner">
+          <div class="card-title">🎓 학과별 맞춤 재생성</div>
+          <div class="card-row">
+            <span class="card-lbl">소속 학과</span>
+            <select class="f-select" id="${dcId}_dept"><option value="">학과 불러오는 중...</option></select>
+          </div>
+          <div class="card-row">
+            <span class="card-lbl">보고서 날짜</span>
+            <input class="f-input" type="date" id="${dcId}_date" value="${iso(new Date())}" />
+          </div>
+          <div id="${dcId}_progress" style="display:none;">
+            <div class="progress-wrap"><div class="progress-bar" id="${dcId}_bar"></div></div>
+          </div>
+          <div id="${dcId}_result" style="display:none;"></div>
+          <div id="${dcId}_actions">
+            <div class="btn-row">
+              <button class="btn primary" id="${dcId}_go">재생성하기</button>
+              <button class="btn secondary" id="${dcId}_cancel">취소</button>
+            </div>
           </div>
         </div>
       </div>
@@ -383,22 +512,25 @@ function appendFeedbackCard(refId) {
     <div class="msg-body">
       <span class="msg-name">AI 어시스턴트</span>
       <div class="card" id="${fId}">
-        <div class="card-title">보고서 피드백</div>
-        <div class="card-row">
-          <div class="fb-lbl">평점 (1–10)</div>
-          <div class="fb-slider-wrap">
-            <input type="range" class="fb-slider" min="1" max="10" value="5"
-              oninput="this.nextElementSibling.textContent = this.value" />
-            <div class="fb-score">5</div>
+        <div class="card-accent"></div>
+        <div class="card-inner">
+          <div class="card-title">보고서 피드백</div>
+          <div class="card-row">
+            <div class="fb-lbl">평점 (1–10)</div>
+            <div class="fb-slider-wrap">
+              <input type="range" class="fb-slider" min="1" max="10" value="5"
+                oninput="this.nextElementSibling.textContent = this.value" />
+              <div class="fb-score">5</div>
+            </div>
           </div>
-        </div>
-        <div class="card-row">
-          <div class="fb-lbl">의견</div>
-          <textarea class="fb-textarea" placeholder="보고서에 대한 의견을 작성해 주세요..."></textarea>
-        </div>
-        <div class="btn-row">
-          <button class="btn primary">제출</button>
-          <button class="btn secondary">취소</button>
+          <div class="card-row">
+            <div class="fb-lbl">의견</div>
+            <textarea class="fb-textarea" placeholder="보고서에 대한 의견을 작성해 주세요..."></textarea>
+          </div>
+          <div class="btn-row">
+            <button class="btn primary">제출</button>
+            <button class="btn secondary">취소</button>
+          </div>
         </div>
       </div>
     </div>`;
@@ -419,14 +551,17 @@ function appendFeedbackCard(refId) {
       return;
     }
     card.innerHTML = `
-      <div class="card-title">피드백이 제출되었습니다 🙏</div>
-      <div class="card-row">
-        <div class="fb-lbl">평점</div>
-        <div class="card-val" style="font-size:22px;font-weight:700;color:var(--blue-600)">
-          ${score}<span style="font-size:13px;font-weight:400;color:var(--gray-400)"> / 10</span>
+      <div class="card-accent"></div>
+      <div class="card-inner">
+        <div class="card-title">피드백이 제출되었습니다 🙏</div>
+        <div class="card-row">
+          <div class="fb-lbl">평점</div>
+          <div class="card-val" style="font-size:22px;font-weight:700;color:var(--blue-600)">
+            ${score}<span style="font-size:13px;font-weight:400;color:var(--gray-400)"> / 10</span>
+          </div>
         </div>
-      </div>
-      ${text ? `<div class="card-row"><div class="fb-lbl">의견</div><div class="card-val">${esc(text)}</div></div>` : ''}`;
+        ${text ? `<div class="card-row"><div class="fb-lbl">의견</div><div class="card-val">${esc(text)}</div></div>` : ''}
+      </div>`;
     scrollBottom();
   });
 

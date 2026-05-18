@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Report AI</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <title>파RAG학기</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
   <link href="style.css" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -19,17 +19,10 @@
         <path d="M8 12h8M8 8h8M8 16h4"/>
       </svg>
     </div>
-    Report AI
+    파RAG학기
   </div>
 
   <div class="topbar-right">
-    <div class="api-badge" id="apiBadge">
-      <div class="api-dot loading" id="apiDot"></div>
-      <span id="apiLabel">localhost:8000</span>
-      <svg width="10" height="6" viewBox="0 0 10 6" fill="none">
-        <path d="M1 1l4 4 4-4" stroke="#94A3B8" stroke-width="1.5" stroke-linecap="round"/>
-      </svg>
-    </div>
     <button class="profile-btn" id="profileBtn" title="내 정보 설정">
       <svg fill="none" stroke-width="2" viewBox="0 0 24 24">
         <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
@@ -37,11 +30,6 @@
     </button>
   </div>
 
-  <div class="api-popover" id="apiPopover">
-    <label>API 서버 주소</label>
-    <input class="api-url-input" id="apiUrlInput" value="http://localhost:8000"
-           placeholder="http://localhost:8000" />
-  </div>
 </div>
 
 <!-- ── Chat ───────────────────────────────────────────────────────── -->
@@ -50,10 +38,9 @@
 
   <div class="input-area">
     <div class="chips" id="chips">
-      <span class="chip">이번 주 업무 요약</span>
-      <span class="chip">최근 2주 성과 보고서</span>
-      <span class="chip">이번 달 주요 활동 정리</span>
-      <span class="chip">지난주 업무 현황</span>
+      <span class="chip">📅 이번 주 활동 요약</span>
+      <span class="chip">📋 이번 달 프로젝트 진행 정리</span>
+      <span class="chip">💻 지난 주 개발 내용 정리</span>
     </div>
     <div class="input-wrap">
       <input class="chat-input" id="chatInput"
@@ -77,11 +64,32 @@
     </div>
     <div class="modal-foot">
       <button class="btn-ghost" id="previewCloseBtn">닫기</button>
+      <button class="btn-ghost" id="previewFileBtn">파일 미리보기</button>
       <select class="f-select f-sm" id="previewFmt" style="width:130px;">
         <option value="docx">Word (.docx)</option>
         <option value="pdf">PDF</option>
       </select>
-      <button class="btn primary" id="previewDlBtn" style="padding:0 16px;">다운로드</button>
+      <button class="btn primary" id="previewDlBtn">다운로드</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── PDF preview modal ─────────────────────────────────────────── -->
+<div class="overlay" id="pdfOverlay">
+  <div class="modal modal-pdf">
+    <div class="modal-head">
+      <h2>실제 파일 미리보기</h2>
+      <button class="modal-close" id="pdfClose">✕</button>
+    </div>
+    <div class="modal-body pdf-body">
+      <div class="pdf-loading" id="pdfLoading">
+        <div class="spin" style="width:28px;height:28px;border-width:3px;"></div>
+        <span>파일 생성 중...</span>
+      </div>
+      <iframe id="pdfFrame" style="display:none;width:100%;height:100%;border:none;"></iframe>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" id="pdfCloseBtn">닫기</button>
     </div>
   </div>
 </div>
