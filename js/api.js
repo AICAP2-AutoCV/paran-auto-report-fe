@@ -93,9 +93,51 @@ async function exportDoc(md, format, title, author, images = []) {
   }
   const blob = await r.blob();
   const url  = URL.createObjectURL(blob);
-  const a    = Object.assign(document.createElement('a'), { href: url, download: `report_${iso(new Date())}.${format}` });
+  const a    = Object.assign(document.createElement('a'), { href: url, download: buildReportFilename(md, title, format) });
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+function buildReportFilename(md, title, format) {
+  const parts = ['활동보고서'];
+  const week = extractReportWeek(`${title || ''}\n${md || ''}`);
+  const convertedDept = extractConvertedDepartment(title || '');
+  const info = typeof userInfo !== 'undefined' ? userInfo : {};
+  if (week) parts.push(week);
+  if (info.student_id) parts.push(info.student_id);
+  if (info.name) parts.push(info.name);
+  if (convertedDept) parts.push(convertedDept);
+  return `${parts.map(cleanFilenamePart).filter(Boolean).join('_')}.${format}`;
+}
+
+function extractConvertedDepartment(title) {
+  const m = title.match(/([가-힣A-Za-z0-9&()\s·.-]+?)\s*(?:용어\s*변환|맞춤)\s*보고서/);
+  return m ? m[1].trim() : '';
+}
+
+function extractReportWeek(text) {
+  const numeric = text.match(/(\d{1,2})\s*주\s*차|(\d{1,2})\s*주차/);
+  if (numeric) return `${numeric[1] || numeric[2]}주차`;
+
+  const monthWeek = text.match(/(?:\d{1,2}\s*월\s*)?(첫째|첫|둘째|둘|셋째|셋|넷째|넷|다섯째|다섯|마지막|막|[1-5])\s*(?:째)?\s*주/);
+  if (!monthWeek) return '';
+  const map = {
+    '첫째': 1, '첫': 1,
+    '둘째': 2, '둘': 2,
+    '셋째': 3, '셋': 3,
+    '넷째': 4, '넷': 4,
+    '다섯째': 5, '다섯': 5,
+    '마지막': 5, '막': 5,
+  };
+  const n = map[monthWeek[1]] || parseInt(monthWeek[1], 10);
+  return n ? `${n}주차` : '';
+}
+
+function cleanFilenamePart(value) {
+  return String(value || '')
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, '')
+    .replace(/\s+/g, '');
 }
 
 async function addGlossary(md) {

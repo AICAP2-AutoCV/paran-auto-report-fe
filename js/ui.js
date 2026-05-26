@@ -122,6 +122,7 @@ function appendReportCard(md, topic, dateParams, traceId = '', images = []) {
   row.dataset.md = md;
   row.dataset.traceId = traceId;
   row.dataset.images = JSON.stringify(images || []);
+  row.dataset.topic = topic;
   row.innerHTML = `
     <div class="avatar">AI</div>
     <div class="msg-body wide">
@@ -181,7 +182,7 @@ function appendReportCard(md, topic, dateParams, traceId = '', images = []) {
     if (!action) return;
     const cardMd = row.dataset.md;
     const cardImages = parseImages(row.dataset.images);
-    if (action === 'preview')  openPreview(cardMd, cardImages);
+    if (action === 'preview')  openPreview(cardMd, cardImages, row.dataset.topic || '');
     if (action === 'download') appendDownloadCard(cid);
     if (action === 'feedback') appendFeedbackCard(cid);
     if (action === 'regen')    appendRegenCard(cid);
@@ -249,9 +250,10 @@ function cleanMdForPreview(md) {
     .replace(/<span\b[^>]*>(.*?)<\/span>/gis, '$1');
 }
 
-function openPreview(md, images = []) {
+function openPreview(md, images = [], topic = '') {
   previewMd = md;
   previewImages = images;
+  previewTopic = topic;
   document.getElementById('previewBody').innerHTML = marked.parse(cleanMdForPreview(md));
   document.getElementById('previewOverlay').classList.add('open');
 }
@@ -340,7 +342,7 @@ function appendDownloadCard(refId) {
     const md  = refRow?.dataset.md ?? '';
     const images = parseImages(refRow?.dataset.images);
     const fmt = document.getElementById(`${dlId}_fmt`).value;
-    await withLoading(this, () => exportDoc(md, fmt, '보고서', '', images));
+    await withLoading(this, () => exportDoc(md, fmt, refRow?.dataset.topic || '보고서', '', images));
     row.remove();
   });
 
@@ -416,6 +418,7 @@ async function runRegen(refId, dcId) {
   const original = refRow?.dataset.md ?? '';
   const date     = document.getElementById(`${dcId}_date`).value;
   const deptName = deptSel.selectedOptions[0].text;
+  const deptLabel = deptName.split(' (')[0];
   const goBtn    = document.getElementById(`${dcId}_go`);
 
   goBtn.disabled = true;
@@ -466,7 +469,7 @@ async function runRegen(refId, dcId) {
       const badge = document.createElement('div');
       badge.className = 'ok-badge';
       badge.style.marginBottom = '10px';
-      badge.textContent = '✓ 재생성 완료';
+      badge.textContent = `✓ ${deptLabel} 용어로 변환 완료`;
       resultDiv.appendChild(badge);
       resultDiv.appendChild(rendered);
 
@@ -481,7 +484,8 @@ async function runRegen(refId, dcId) {
         </div>`;
       document.getElementById(`${dcId}_dl`).addEventListener('click', async function () {
         const fmt = document.getElementById(`${dcId}_fmt`).value;
-        await withLoading(this, () => exportDoc(md, fmt, `${deptName} 맞춤 보고서`, ''));
+        const refTopic = document.getElementById(refId)?.dataset.topic || '';
+        await withLoading(this, () => exportDoc(md, fmt, `${deptLabel} 용어 변환 보고서 ${refTopic}`, ''));
       });
 
       scrollBottom();

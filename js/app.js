@@ -44,7 +44,7 @@ function bindEvents() {
   document.getElementById('previewDlBtn').addEventListener('click', async () => {
     const btn = document.getElementById('previewDlBtn');
     const fmt = document.getElementById('previewFmt').value;
-    await withLoading(btn, () => exportDoc(previewMd, fmt, '보고서', '', previewImages));
+    await withLoading(btn, () => exportDoc(previewMd, fmt, previewTopic || '보고서', '', previewImages));
   });
 
   document.getElementById('previewFileBtn').addEventListener('click', async function () {
@@ -99,6 +99,9 @@ function extractDateParams(text) {
   if (explicitDates.length >= 2) return { since: explicitDates[0], until: explicitDates[1] };
   if (explicitDates.length === 1) return { since: explicitDates[0], until: explicitDates[0] };
 
+  const monthWeek = parseMonthWeek(text);
+  if (monthWeek) return monthWeek;
+
   if (/이번\s*주|이번주/.test(text))                   return { use_this_week: true };
   if (/지난\s*주|저번\s*주|지난주|저번주/.test(text)) {
     const n = new Date(), dow = n.getDay() || 7;
@@ -120,4 +123,44 @@ function extractDateParams(text) {
   }
   if (/오늘/.test(text)) { const t = iso(new Date()); return { since: t, until: t }; }
   return { use_this_week: true };
+}
+
+function parseMonthWeek(text) {
+  const m = text.match(/(?:(20\d{2})\s*년\s*)?(\d{1,2})\s*월\s*(?:(첫째|첫|둘째|둘|셋째|셋|넷째|넷|다섯째|다섯|마지막|막|[1-5])\s*(?:째)?\s*주|([1-5])\s*주차)/);
+  if (!m) return null;
+
+  const year = m[1] ? parseInt(m[1], 10) : new Date().getFullYear();
+  const month = parseInt(m[2], 10);
+  if (month < 1 || month > 12) return null;
+
+  const week = koreanWeekToNumber(m[3] || m[4]);
+  if (!week) return null;
+
+  const monthIndex = month - 1;
+  const lastDay = new Date(year, month, 0).getDate();
+  const startDay = week === 5 ? 29 : (week - 1) * 7 + 1;
+  if (startDay > lastDay) return null;
+
+  const endDay = Math.min(startDay + 6, lastDay);
+  return {
+    since: ymd(year, month, startDay),
+    until: ymd(year, month, endDay),
+  };
+}
+
+function koreanWeekToNumber(value) {
+  const map = {
+    '첫째': 1, '첫': 1,
+    '둘째': 2, '둘': 2,
+    '셋째': 3, '셋': 3,
+    '넷째': 4, '넷': 4,
+    '다섯째': 5, '다섯': 5,
+    '마지막': 5, '막': 5,
+  };
+  return map[value] || parseInt(value, 10);
+}
+
+function ymd(year, month, day) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${year}-${pad(month)}-${pad(day)}`;
 }
