@@ -1,0 +1,175 @@
+/* ================================================================
+   API: health check, SSE streaming, export, feedback
+================================================================ */
+
+async function checkHealth() {
+  const dot = document.getElementById('apiDot');
+  dot.className = 'api-dot loading';
+  try {
+    const r = await fetch(`${API_BASE}/health`, { signal: AbortSignal.timeout(5000) });
+    dot.className = r.ok ? 'api-dot ok' : 'api-dot err';
+  } catch {
+    dot.className = 'api-dot err';
+  }
+}
+
+async function streamSSE(url, body, onChunk, onDone, onError, onMeta) {
+  let resp;
+  try {
+    resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    onError('서버에 연결할 수 없습니다. API 주소를 확인해 주세요.');
+    return;
+  }
+  if (!resp.ok) {
+    const txt = await resp.text().catch(() => '');
+    onError(`서버 오류 (${resp.status}): ${txt.slice(0, 180)}`);
+    return;
+  }
+  onMeta?.({ traceId: resp.headers.get('X-Trace-ID') || '' });
+
+  const reader = resp.body.getReader();
+  const dec    = new TextDecoder();
+  let buf = '';
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (raw === '[DONE]') { onDone(); return; }
+        try { const p = JSON.parse(raw); if (p.chunk != null) onChunk(p.chunk); } catch {}
+      }
+    }
+  } catch { onError('스트리밍 중 오류가 발생했습니다.'); return; }
+  onDone();
+}
+
+async function generateFullReport(body) {
+  let r;
+  try {
+    r = await fetch(`${API_BASE}/report/generate-full`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new Error('서버에 연결할 수 없습니다. API 주소를 확인해 주세요.');
+  }
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    throw new Error(`서버 오류 (${r.status}): ${t.slice(0, 180)}`);
+  }
+  return r.json();
+}
+
+async function exportDoc(md, format, title, author, images = []) {
+  const r = await fetch(`${API_BASE}/document/export`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      markdown:   md,
+      format,
+      title,
+      author:     userInfo.name || author || 'Unknown',
+      student_id: userInfo.student_id || undefined,
+      department: userInfo.department || undefined,
+      team_name:  userInfo.team_name  || undefined,
+      role:       userInfo.role       || undefined,
+      images,
+    }),
+  });
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    throw new Error(`HTTP ${r.status}: ${t.slice(0, 80)}`);
+  }
+  const blob = await r.blob();
+  const url  = URL.createObjectURL(blob);
+  const a    = Object.assign(document.createElement('a'), { href: url, download: buildReportFilename(md, title, format) });
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function buildReportFilename(md, title, format) {
+  const parts = ['활동보고서'];
+  const week = extractReportWeek(`${title || ''}\n${md || ''}`);
+  const convertedDept = extractConvertedDepartment(title || '');
+  const info = typeof userInfo !== 'undefined' ? userInfo : {};
+  if (week) parts.push(week);
+  if (info.student_id) parts.push(info.student_id);
+  if (info.name) parts.push(info.name);
+  if (convertedDept) parts.push(convertedDept);
+  return `${parts.map(cleanFilenamePart).filter(Boolean).join('_')}.${format}`;
+}
+
+function extractConvertedDepartment(title) {
+  const m = title.match(/([가-힣A-Za-z0-9&()\s·.-]+?)\s*(?:용어\s*변환|맞춤)\s*보고서/);
+  return m ? m[1].trim() : '';
+}
+
+function extractReportWeek(text) {
+  const numeric = text.match(/(\d{1,2})\s*주\s*차|(\d{1,2})\s*주차/);
+  if (numeric) return `${numeric[1] || numeric[2]}주차`;
+
+  const monthWeek = text.match(/(?:\d{1,2}\s*월\s*)?(첫째|첫|둘째|둘|셋째|셋|넷째|넷|다섯째|다섯|마지막|막|[1-5])\s*(?:째)?\s*주/);
+  if (!monthWeek) return '';
+  const map = {
+    '첫째': 1, '첫': 1,
+    '둘째': 2, '둘': 2,
+    '셋째': 3, '셋': 3,
+    '넷째': 4, '넷': 4,
+    '다섯째': 5, '다섯': 5,
+    '마지막': 5, '막': 5,
+  };
+  const n = map[monthWeek[1]] || parseInt(monthWeek[1], 10);
+  return n ? `${n}주차` : '';
+}
+
+function cleanFilenamePart(value) {
+  return String(value || '')
+    .trim()
+    .replace(/[\\/:*?"<>|]/g, '')
+    .replace(/\s+/g, '');
+}
+
+async function addGlossary(md) {
+  const r = await fetch(`${API_BASE}/report/glossary`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      markdown: md,
+      session_id: `web-glossary-${Date.now()}`,
+    }),
+  });
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    throw new Error(`HTTP ${r.status}: ${t.slice(0, 120)}`);
+  }
+  return r.json();
+}
+
+async function submitFeedback(traceId, score, comment) {
+  const r = await fetch(`${API_BASE}/feedback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      trace_id: traceId,
+      score,
+      comment: comment || null,
+      feedback_type: 'user_satisfaction',
+    }),
+  });
+  if (!r.ok) {
+    const t = await r.text().catch(() => '');
+    throw new Error(`HTTP ${r.status}: ${t.slice(0, 120)}`);
+  }
+  return r.json();
+}

@@ -1,0 +1,166 @@
+/* ================================================================
+   진입점: init, 이벤트 바인딩, 메시지 전송, 날짜 파싱
+================================================================ */
+
+document.addEventListener('DOMContentLoaded', () => {
+  appendWelcome();
+  checkHealth();
+  bindEvents();
+  loadUserInfo();
+});
+
+function bindEvents() {
+  // 전송
+  document.getElementById('sendBtn').addEventListener('click', sendMessage);
+  document.getElementById('chatInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.isComposing) sendMessage();
+  });
+
+  // 칩
+  document.getElementById('chips').addEventListener('click', e => {
+    const chip = e.target.closest('.chip');
+    if (chip) {
+      document.getElementById('chatInput').value = chip.textContent;
+      document.getElementById('chatInput').focus();
+    }
+  });
+
+  // 프로필
+  document.getElementById('profileBtn').addEventListener('click', () => openProfileModal(false));
+  document.getElementById('profileClose').addEventListener('click', closeProfileModal);
+  document.getElementById('profileSkip').addEventListener('click', closeProfileModal);
+  document.getElementById('profileSave').addEventListener('click', saveUserInfo);
+  document.getElementById('profileOverlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('profileOverlay')) closeProfileModal();
+  });
+
+  // 미리보기 모달
+  const closePreview = () => document.getElementById('previewOverlay').classList.remove('open');
+  document.getElementById('previewClose').addEventListener('click', closePreview);
+  document.getElementById('previewCloseBtn').addEventListener('click', closePreview);
+  document.getElementById('previewOverlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('previewOverlay')) closePreview();
+  });
+  document.getElementById('previewDlBtn').addEventListener('click', async () => {
+    const btn = document.getElementById('previewDlBtn');
+    const fmt = document.getElementById('previewFmt').value;
+    await withLoading(btn, () => exportDoc(previewMd, fmt, previewTopic || '보고서', '', previewImages));
+  });
+
+  document.getElementById('previewFileBtn').addEventListener('click', async function () {
+    document.getElementById('previewOverlay').classList.remove('open');
+    await openDocPreview(previewMd, previewImages, this);
+  });
+}
+
+/* ── 메시지 전송 ──────────────────────────────────────────────── */
+
+async function sendMessage() {
+  if (isStreaming) return;
+  const input = document.getElementById('chatInput');
+  const topic = input.value.trim();
+  if (!topic) return;
+
+  input.value = '';
+  document.getElementById('chips').style.display = 'none';
+  setUI(false);
+  appendUserMsg(topic);
+
+  const dateParams = extractDateParams(topic);
+  const req = {
+    topic, k: 10, session_id: `web-${Date.now()}`, ...dateParams,
+    role:       userInfo.role       || undefined,
+    team_name:  userInfo.team_name  || undefined,
+    student_id: userInfo.student_id || undefined,
+    department: userInfo.department || undefined,
+    name:       userInfo.name       || undefined,
+  };
+
+  const loadRow = appendLoadingMsg();
+  try {
+    const payload = await generateFullReport(req);
+    loadRow.remove();
+    appendReportCard(payload.report || '', topic, dateParams, payload.trace_id || '', payload.images || []);
+  } catch (err) {
+    loadRow.remove();
+    appendErrorMsg(err.message || String(err));
+  } finally {
+    setUI(true);
+  }
+}
+
+/* ── 한국어 날짜 파싱 ─────────────────────────────────────────── */
+
+function extractDateParams(text) {
+  const explicitRange = text.match(/(\d{4}-\d{2}-\d{2})\s*(?:~|부터|에서|-|—|–|to)\s*(\d{4}-\d{2}-\d{2})/i);
+  if (explicitRange) return { since: explicitRange[1], until: explicitRange[2] };
+
+  const explicitDates = [...text.matchAll(/\d{4}-\d{2}-\d{2}/g)].map(m => m[0]);
+  if (explicitDates.length >= 2) return { since: explicitDates[0], until: explicitDates[1] };
+  if (explicitDates.length === 1) return { since: explicitDates[0], until: explicitDates[0] };
+
+  const monthWeek = parseMonthWeek(text);
+  if (monthWeek) return monthWeek;
+
+  if (/이번\s*주|이번주/.test(text))                   return { use_this_week: true };
+  if (/지난\s*주|저번\s*주|지난주|저번주/.test(text)) {
+    const n = new Date(), dow = n.getDay() || 7;
+    const mon = new Date(n); mon.setDate(n.getDate() - dow - 6);
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    return { since: iso(mon), until: iso(sun) };
+  }
+  const dm = text.match(/최근\s*(\d+)\s*일/);
+  if (dm) return { last_days: parseInt(dm[1]) };
+  const wm = text.match(/최근\s*(\d+)\s*주/);
+  if (wm) return { last_days: parseInt(wm[1]) * 7 };
+  if (/이번\s*달|이번달/.test(text)) return { last_days: 30 };
+  if (/지난\s*달|저번\s*달|지난달|저번달/.test(text)) {
+    const n = new Date();
+    return {
+      since: iso(new Date(n.getFullYear(), n.getMonth() - 1, 1)),
+      until: iso(new Date(n.getFullYear(), n.getMonth(), 0)),
+    };
+  }
+  if (/오늘/.test(text)) { const t = iso(new Date()); return { since: t, until: t }; }
+  return { use_this_week: true };
+}
+
+function parseMonthWeek(text) {
+  const m = text.match(/(?:(20\d{2})\s*년\s*)?(\d{1,2})\s*월\s*(?:(첫째|첫|둘째|둘|셋째|셋|넷째|넷|다섯째|다섯|마지막|막|[1-5])\s*(?:째)?\s*주|([1-5])\s*주차)/);
+  if (!m) return null;
+
+  const year = m[1] ? parseInt(m[1], 10) : new Date().getFullYear();
+  const month = parseInt(m[2], 10);
+  if (month < 1 || month > 12) return null;
+
+  const week = koreanWeekToNumber(m[3] || m[4]);
+  if (!week) return null;
+
+  const monthIndex = month - 1;
+  const lastDay = new Date(year, month, 0).getDate();
+  const startDay = week === 5 ? 29 : (week - 1) * 7 + 1;
+  if (startDay > lastDay) return null;
+
+  const endDay = Math.min(startDay + 6, lastDay);
+  return {
+    since: ymd(year, month, startDay),
+    until: ymd(year, month, endDay),
+  };
+}
+
+function koreanWeekToNumber(value) {
+  const map = {
+    '첫째': 1, '첫': 1,
+    '둘째': 2, '둘': 2,
+    '셋째': 3, '셋': 3,
+    '넷째': 4, '넷': 4,
+    '다섯째': 5, '다섯': 5,
+    '마지막': 5, '막': 5,
+  };
+  return map[value] || parseInt(value, 10);
+}
+
+function ymd(year, month, day) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${year}-${pad(month)}-${pad(day)}`;
+}
