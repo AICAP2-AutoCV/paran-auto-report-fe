@@ -307,6 +307,47 @@ document.getElementById('pdfCloseBtn').addEventListener('click', () => {
   document.getElementById('pdfOverlay').classList.remove('open');
 });
 
+/* ── 다운로드 동의 확인 ───────────────────────────────────────── */
+
+let _consentCallback = null;
+
+(function initConsent() {
+  const overlay   = document.getElementById('consentOverlay');
+  const okBtn     = document.getElementById('consentOk');
+  const aiCb      = document.getElementById('consentAI');
+  const useCb     = document.getElementById('consentUse');
+
+  function updateOk() {
+    okBtn.disabled = !(aiCb.checked && useCb.checked);
+  }
+  aiCb.addEventListener('change', updateOk);
+  useCb.addEventListener('change', updateOk);
+
+  function closeConsent() {
+    overlay.classList.remove('open');
+    aiCb.checked  = false;
+    useCb.checked = false;
+    okBtn.disabled = true;
+    _consentCallback = null;
+  }
+
+  document.getElementById('consentClose').addEventListener('click', closeConsent);
+  document.getElementById('consentCancel').addEventListener('click', closeConsent);
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeConsent(); });
+
+  okBtn.addEventListener('click', async function () {
+    if (!_consentCallback) return;
+    const cb = _consentCallback;
+    closeConsent();
+    await withLoading(this, cb);
+  });
+})();
+
+function confirmDownload(callback) {
+  _consentCallback = callback;
+  document.getElementById('consentOverlay').classList.add('open');
+}
+
 /* ── 다운로드 카드 ────────────────────────────────────────────── */
 
 function appendDownloadCard(refId) {
@@ -337,13 +378,15 @@ function appendDownloadCard(refId) {
     </div>`;
 
   row.querySelector('.btn.secondary').addEventListener('click', () => row.remove());
-  row.querySelector(`#${dlId}_ok`).addEventListener('click', async function () {
+  row.querySelector(`#${dlId}_ok`).addEventListener('click', () => {
     const refRow = document.getElementById(refId);
     const md  = refRow?.dataset.md ?? '';
     const images = parseImages(refRow?.dataset.images);
     const fmt = document.getElementById(`${dlId}_fmt`).value;
-    await withLoading(this, () => exportDoc(md, fmt, refRow?.dataset.topic || '보고서', '', images));
-    row.remove();
+    confirmDownload(async () => {
+      await exportDoc(md, fmt, refRow?.dataset.topic || '보고서', '', images);
+      row.remove();
+    });
   });
 
   msgs().appendChild(row);
@@ -482,10 +525,10 @@ async function runRegen(refId, dcId) {
           </select>
           <button class="btn dark" id="${dcId}_dl">다운로드</button>
         </div>`;
-      document.getElementById(`${dcId}_dl`).addEventListener('click', async function () {
+      document.getElementById(`${dcId}_dl`).addEventListener('click', () => {
         const fmt = document.getElementById(`${dcId}_fmt`).value;
         const refTopic = document.getElementById(refId)?.dataset.topic || '';
-        await withLoading(this, () => exportDoc(md, fmt, `${deptLabel} 용어 변환 보고서 ${refTopic}`, ''));
+        confirmDownload(() => exportDoc(md, fmt, `${deptLabel} 용어 변환 보고서 ${refTopic}`, ''));
       });
 
       scrollBottom();

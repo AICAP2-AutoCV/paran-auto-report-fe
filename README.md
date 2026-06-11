@@ -1,161 +1,237 @@
-# 파RAG학기 — 프론트엔드 (paran-auto-report-fe)
+# 파RAG학기 프론트엔드
 
-채팅 형태로 보고서를 요청하고, 결과를 미리보거나 Word/PDF로 다운로드하는 **브라우저 UI**입니다.
+Notion 데이터를 기반으로 AI 보고서를 생성하고 미리보기, 재생성, 다운로드할 수 있는 채팅형 웹 UI입니다.
 
-> **이 폴더만으로는 동작하지 않습니다.**  
-> 반드시 `paran-auto-report/` (API 서버)가 먼저 실행되어 있어야 합니다.  
-> 서버 세팅 방법은 [paran-auto-report/README.md](../paran-auto-report/README.md)를 참고하세요.
+이 저장소는 별도 프론트엔드 서버나 빌드 과정 없이 동작합니다. 백엔드인 [`paran-auto-report`](https://github.com/AICAP2-AutoCV/paran-auto-report)가 정적 파일을 `/ui` 경로로 제공합니다.
 
----
+## 주요 기능
 
-## 이 폴더를 별도로 실행할 필요가 없는 이유
+- 자연어로 보고서 주제와 기간 입력
+- 보고서 생성 결과 및 관련 이미지 확인
+- Markdown 및 실제 Word 파일 미리보기
+- Word(`.docx`)와 PDF 다운로드
+- 학과별 보고서 양식으로 재생성
+- 전문 용어 해설 추가
+- 1~10점 사용자 피드백 제출
+- 사용자 프로필 저장 및 보고서 표지 반영
+- AI 생성물 확인 후 다운로드
 
-API 서버(`paran-auto-report/src/api.py`)는 시작할 때 이 폴더를 자동으로 감지해 `/ui` 경로로 서빙합니다.
+## 목차
+
+- [실행 방법](#실행-방법)
+- [사용 방법](#사용-방법)
+- [화면 기능](#화면-기능)
+- [개발 안내](#개발-안내)
+- [파일 구조](#파일-구조)
+- [API 연결](#api-연결)
+- [문제 해결](#문제-해결)
+
+## 실행 방법
+
+### 1. 저장소 배치
+
+백엔드와 프론트엔드 저장소를 같은 상위 폴더에 배치합니다.
+
+```text
+AutoCV/
+├── paran-auto-report/
+└── paran-auto-report-fe/
+```
+
+처음 설치하는 경우:
+
+```bash
+git clone https://github.com/AICAP2-AutoCV/paran-auto-report.git
+git clone https://github.com/AICAP2-AutoCV/paran-auto-report-fe.git
+```
+
+### 2. 백엔드 실행
+
+백엔드 설치와 환경 변수 설정, Vector DB 구축 방법은 [백엔드 README](https://github.com/AICAP2-AutoCV/paran-auto-report)를 참고하세요.
+
+```bash
+cd paran-auto-report
+source .venv/bin/activate
+python -m uvicorn src.api:app --host 127.0.0.1 --port 8000 --reload
+```
+
+백엔드는 시작할 때 인접한 `paran-auto-report-fe/` 폴더를 감지해 자동으로 서빙합니다.
 
 ```python
-# paran-auto-report/src/api.py 내부
 _FE_DIR = Path(__file__).parent.parent.parent / "paran-auto-report-fe"
 if _FE_DIR.exists():
     app.mount("/ui", StaticFiles(directory=str(_FE_DIR), html=True), name="frontend")
 ```
 
-즉, **두 폴더가 나란히 있고 API 서버가 켜져 있으면** 브라우저에서 바로 열 수 있습니다.
+### 3. 화면 접속
 
-```
-http://localhost:8000/ui
-```
+백엔드가 실행 중일 때 다음 주소로 접속합니다.
 
----
+<http://localhost:8000/ui>
 
-## 화면 기능 설명
+프론트엔드용 명령을 따로 실행할 필요는 없습니다.
 
-### 1. 프로필 입력 (최초 1회)
+## 사용 방법
 
-처음 접속하면 내 정보 입력 모달이 자동으로 뜹니다.
+1. 처음 접속하면 프로필 입력 창에서 팀명, 학과, 학번, 성명, 역할을 입력합니다.
+2. 추천 문구를 선택하거나 채팅창에 원하는 보고서를 직접 입력합니다.
+3. 생성된 보고서 카드에서 미리보기, 다운로드, 피드백, 학과별 재생성을 선택합니다.
+4. 필요하면 전문 용어 해설을 추가합니다.
+5. AI 생성물 확인 항목에 동의한 뒤 Word 또는 PDF로 다운로드합니다.
 
-| 항목 | 설명 |
-|------|------|
-| 팀명 | 보고서 표지에 표시됩니다 |
-| 학과 | 보고서 표지에 표시됩니다 |
-| 학번 | 보고서 표지에 표시됩니다 |
-| 성명 | 보고서 표지 + 작성자에 표시됩니다 |
-| 내 역할 | AI가 보고서를 쓸 때 참고합니다 (예: 백엔드 개발, 데이터 분석) |
+### 입력 예시
 
-- 입력한 정보는 **브라우저 localStorage에 저장**되어 다음 접속에도 유지됩니다.
-- 나중에 수정하려면 우측 상단 프로필 버튼(사람 아이콘)을 클릭하세요.
+| 입력 | 적용 기간 |
+|---|---|
+| `이번 주 활동 요약해줘` | 이번 주 월요일 이후 |
+| `지난 주 개발 내용 정리` | 지난 주 월요일부터 일요일 |
+| `최근 14일 작업 정리` | 현재 날짜 기준 최근 14일 |
+| `이번 달 프로젝트 진행 정리` | 최근 30일 |
+| `지난 달 회의 내용 정리` | 지난 달 1일부터 말일까지 |
+| `2026-06-01 ~ 2026-06-07 요약` | 입력한 날짜 범위 |
 
----
+## 화면 기능
 
-### 2. 보고서 생성
+### 프로필
 
-채팅 입력창에 보고서 주제를 입력하고 전송하면 AI가 Notion 데이터를 기반으로 보고서를 작성합니다.
+| 항목 | 사용 위치 |
+|---|---|
+| 팀명 | 보고서 표지 |
+| 학과 | 보고서 표지 |
+| 학번 | 보고서 표지 |
+| 성명 | 보고서 표지 및 작성자 |
+| 역할 | 보고서 생성 시 사용자 담당 업무 참고 |
 
-**기간을 자연어로 지정할 수 있습니다.**
+입력한 정보는 브라우저 `localStorage`의 `user_info` 항목에 저장됩니다. 우측 상단 프로필 버튼에서 언제든 수정할 수 있습니다.
 
-| 입력 예시 | 적용 기간 |
-|-----------|-----------|
-| 이번 주 활동 요약해줘 | 이번 주 월~일 |
-| 지난 주 개발 내용 정리 | 지난 주 월~일 |
-| 최근 14일 작업 정리 | 최근 14일 |
-| 이번 달 프로젝트 진행 정리 | 최근 30일 |
-| 지난 달 회의 내용 정리 | 지난 달 1일~말일 |
-| 2025-05-01 ~ 2025-05-15 요약 | 해당 날짜 범위 |
+### 보고서 카드
 
-상단의 **추천 칩**을 클릭하면 입력창에 자동으로 채워집니다.
+| 기능 | 설명 |
+|---|---|
+| 미리보기 | 생성된 Markdown 보고서를 화면에서 확인 |
+| 파일 미리보기 | Word 파일을 생성한 뒤 HTML로 변환해 확인 |
+| 다운로드 | Word 또는 PDF 형식으로 저장 |
+| 용어 해설 | 보고서의 전문 용어를 강조하고 해설 섹션 추가 |
+| 학과별 재생성 | 선택한 학과의 보고서 양식으로 내용 재작성 |
+| 피드백 | 보고서에 1~10점 평점과 의견 제출 |
 
----
+파일 미리보기는 백엔드 환경에 pandoc이 설치되어 있어야 합니다.
 
-### 3. 보고서 카드 기능
+### AI 생성 동의
 
-보고서 생성이 완료되면 카드가 표시됩니다. 카드에서 할 수 있는 것들:
+다운로드 전 다음 두 항목을 모두 확인해야 합니다.
 
-| 버튼 | 기능 |
-|------|------|
-| 미리보기 | 마크다운으로 렌더링된 보고서를 모달에서 확인 |
-| 다운로드 | Word(.docx) 또는 PDF 형식으로 저장 |
-| 피드백 | 보고서 품질을 1~10점으로 평가 + 의견 제출 |
-| 학과별 맞춤 재생성 | 학과를 선택하면 해당 학과 스타일로 보고서 재작성 |
-| 용어 해설 추가 (체크박스) | 보고서 내 전문 용어에 해설 섹션 자동 추가 |
+1. 이 보고서는 AI가 생성한 것임을 확인했습니다.
+2. 이 보고서를 그대로 사용하지 않고 응용·수정하여 활용하겠습니다.
 
-**미리보기 모달**에서는 추가로:
-- **파일 미리보기** — Word 파일을 실제로 변환해 HTML로 보여줍니다 (pandoc 필요)
-- **다운로드** — 형식 선택 후 바로 저장
+두 체크박스를 모두 선택하면 다운로드 버튼이 활성화됩니다.
 
----
+### 학과별 맞춤 재생성
 
-### 4. 학과별 맞춤 재생성
+1. 보고서 카드에서 `학과별 맞춤 재생성`을 선택합니다.
+2. API에서 불러온 학과 목록 중 하나를 선택합니다.
+3. 보고서 날짜를 지정합니다.
+4. `재생성하기`를 누르면 결과가 실시간으로 표시됩니다.
+5. 완료된 보고서를 Word 또는 PDF로 다운로드합니다.
 
-같은 Notion 데이터를 기반으로 학과별 보고서 양식에 맞게 재작성합니다.
+## 개발 안내
 
-1. 보고서 카드의 **학과별 맞춤 재생성** 버튼 클릭
-2. 소속 학과 선택 (API에서 자동으로 목록을 불러옵니다)
-3. 보고서 날짜 선택
-4. **재생성하기** 클릭 → 스트리밍으로 실시간 생성
-5. 완료 후 Word/PDF로 다운로드
+이 프로젝트는 HTML, CSS, Vanilla JavaScript로 구성되어 있으며 별도 패키지 설치나 번들링이 필요하지 않습니다.
 
----
+- 파일을 수정한 뒤 브라우저를 새로고침하면 바로 반영됩니다.
+- 외부 라이브러리는 CDN으로 불러옵니다.
+- Markdown 렌더링에는 `marked.js`를 사용합니다.
+- 폰트는 Pretendard Variable을 사용합니다.
+- 일반 API 요청은 Fetch API로 처리하고, 학과별 재생성 결과는 SSE로 스트리밍합니다.
+- 전역 상태는 `js/state.js`에서 관리합니다.
+
+브라우저가 이전 파일을 캐시하고 있다면 강력 새로고침을 사용하세요.
 
 ## 파일 구조
 
-```
+```text
 paran-auto-report-fe/
-├── index.html          ← 전체 HTML 구조 (모달 포함)
-├── style.css           ← 전체 스타일
+├── index.html       # 채팅 화면과 모달의 HTML 구조
+├── style.css        # 전체 화면 및 반응형 스타일
 └── js/
-    ├── state.js        ← 전역 변수 (API_BASE, isStreaming, userInfo 등)
-    ├── api.js          ← API 서버와 통신하는 fetch 함수 모음
-    ├── profile.js      ← 프로필 모달 열기/닫기, localStorage 저장
-    ├── ui.js           ← 메시지 카드, 모달, 다운로드 카드 등 UI 빌더
-    └── app.js          ← 진입점, 이벤트 바인딩, 날짜 파싱 로직
+    ├── state.js     # API 주소와 전역 상태
+    ├── api.js       # 보고서 생성, 내보내기, 피드백 API
+    ├── profile.js   # 프로필 입력 및 localStorage 관리
+    ├── ui.js        # 보고서 카드, 모달, 재생성 UI
+    └── app.js       # 초기화, 이벤트 연결, 날짜 해석
 ```
 
-### 각 JS 파일의 역할
+### JavaScript 모듈
 
-**state.js** — 다른 파일들이 공유하는 전역 변수를 선언합니다.
-```js
-let API_BASE = window.location.origin; // API 서버 주소 (자동 감지)
-let isStreaming = false;               // 생성 중 여부
-let userInfo = {};                     // 프로필 정보
+| 파일 | 주요 역할 |
+|---|---|
+| `state.js` | `API_BASE`, 생성 상태, 미리보기 데이터, 사용자 정보 관리 |
+| `api.js` | 상태 확인, 보고서 생성, 문서 다운로드, 용어 해설, 피드백 요청 |
+| `profile.js` | 프로필 모달 제어와 `localStorage` 읽기·쓰기 |
+| `ui.js` | 메시지, 보고서 카드, 다운로드, 재생성, 피드백 UI 렌더링 |
+| `app.js` | 페이지 초기화, 입력 이벤트, 한국어 기간 표현 해석 |
+
+스크립트는 의존 순서에 맞춰 다음과 같이 로드됩니다.
+
+```html
+<script src="js/state.js"></script>
+<script src="js/api.js"></script>
+<script src="js/profile.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
 ```
 
-**api.js** — 서버와 통신하는 함수들. 직접 fetch를 쓰지 않고 이 파일의 함수를 씁니다.
-- `checkHealth()` — 서버 연결 상태 확인
-- `generateFullReport(body)` — 보고서 생성 요청
-- `exportDoc(md, format, ...)` — Word/PDF 다운로드
-- `addGlossary(md)` — 용어 해설 추가
-- `submitFeedback(traceId, score, comment)` — 피드백 제출
+## API 연결
 
-**app.js** — 페이지 로드 시 초기화, 버튼 이벤트, 한국어 날짜 파싱.
+### API 주소
 
-**ui.js** — DOM 조작. 메시지 추가, 카드 생성, 모달 제어 등.
-
-**profile.js** — localStorage에서 사용자 정보를 읽고 씁니다.
-
----
-
-## API 주소 변경이 필요한 경우
-
-기본적으로 `state.js`에서 API 주소를 자동으로 감지합니다.
+`js/state.js`는 현재 페이지의 origin을 API 주소로 사용합니다.
 
 ```js
-// state.js
 let API_BASE = window.location.origin.startsWith('http')
-  ? window.location.origin       // /ui 로 접속하면 http://localhost:8000
-  : 'http://localhost:8000';     // 파일로 직접 열었을 때 기본값
+  ? window.location.origin
+  : 'http://localhost:8000';
 ```
 
-API 서버가 다른 포트나 주소에서 실행 중이라면 `state.js`의 `API_BASE`를 직접 수정하세요.
+따라서 `http://localhost:8000/ui`로 접속하면 API 요청도 자동으로 `http://localhost:8000`으로 전송됩니다.
+
+백엔드 주소를 고정해야 한다면 `API_BASE`를 직접 변경합니다.
 
 ```js
-// 예: API 서버가 8080 포트에 있는 경우
 let API_BASE = 'http://localhost:8080';
 ```
 
----
+### 사용 API
 
-## 개발 시 참고사항
+| Method | Endpoint | 사용 기능 |
+|---|---|---|
+| `GET` | `/health` | 백엔드 연결 상태 확인 |
+| `GET` | `/departments` | 학과 목록 조회 |
+| `POST` | `/report/generate-full` | 보고서와 관련 이미지 생성 |
+| `POST` | `/report/regenerate` | 학과별 보고서 재생성 |
+| `POST` | `/report/glossary` | 전문 용어 해설 추가 |
+| `POST` | `/document/export` | Word 또는 PDF 다운로드 |
+| `POST` | `/document/preview` | 실제 파일 기반 미리보기 |
+| `POST` | `/feedback` | 사용자 평가 저장 |
 
-- 별도 빌드 과정 없이 HTML/CSS/JS 파일을 수정하면 브라우저 새로고침으로 바로 반영됩니다.
-- API 서버의 `--reload` 옵션과 무관하게 FE 파일은 즉시 적용됩니다.
-- 브라우저 개발자 도구(F12) → Network 탭에서 API 요청/응답을 확인할 수 있습니다.
-- `localStorage`에 저장된 프로필 정보는 개발자 도구 → Application → Local Storage에서 확인하거나 삭제할 수 있습니다.
+## 문제 해결
+
+### `/ui`가 열리지 않는 경우
+
+- 백엔드가 `http://localhost:8000`에서 실행 중인지 확인합니다.
+- <http://localhost:8000/health>가 `{"status":"ok"}`를 반환하는지 확인합니다.
+- 두 저장소가 같은 상위 폴더에 있는지 확인합니다.
+
+### 보고서 생성 요청이 실패하는 경우
+
+- 브라우저 개발자 도구의 Network 탭에서 실패한 요청과 응답을 확인합니다.
+- 백엔드 터미널의 오류 로그를 확인합니다.
+- 백엔드 Vector DB가 먼저 구축되었는지 확인합니다.
+
+### 프로필을 초기화하려는 경우
+
+브라우저 개발자 도구의 Application 또는 저장소 탭에서 Local Storage를 열고 `user_info`를 삭제합니다.
+
+### 파일 미리보기가 실패하는 경우
+
+백엔드 환경에서 `pandoc --version`을 실행해 pandoc 설치 여부를 확인합니다. 기본 Markdown 미리보기와 Word 다운로드는 pandoc 없이도 사용할 수 있습니다.
