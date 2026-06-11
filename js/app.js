@@ -41,10 +41,9 @@ function bindEvents() {
   document.getElementById('previewOverlay').addEventListener('click', e => {
     if (e.target === document.getElementById('previewOverlay')) closePreview();
   });
-  document.getElementById('previewDlBtn').addEventListener('click', async () => {
-    const btn = document.getElementById('previewDlBtn');
+  document.getElementById('previewDlBtn').addEventListener('click', () => {
     const fmt = document.getElementById('previewFmt').value;
-    await withLoading(btn, () => exportDoc(previewMd, fmt, previewTopic || '보고서', '', previewImages));
+    confirmDownload(() => exportDoc(previewMd, fmt, previewTopic || '보고서', '', previewImages));
   });
 
   document.getElementById('previewFileBtn').addEventListener('click', async function () {

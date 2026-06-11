@@ -402,6 +402,24 @@ body {
 }
 .glossary-toggle:has(input:checked) { color: var(--blue-600); }
 
+/* Download consent checkboxes */
+.consent-label {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 13px; color: var(--gray-600); cursor: pointer;
+  padding: 10px 12px; border-radius: 10px; margin-bottom: 8px;
+  border: 1px solid var(--gray-200); transition: background 0.15s, border-color 0.15s;
+  user-select: none;
+}
+.consent-label:has(input:checked) {
+  background: var(--blue-50, #eff6ff); border-color: var(--blue-300, #93c5fd);
+  color: var(--blue-800, #1e40af);
+}
+.consent-label input[type="checkbox"] {
+  accent-color: var(--blue-500); width: 16px; height: 16px;
+  flex-shrink: 0; margin-top: 1px; cursor: pointer;
+}
+#consentOk:disabled { opacity: 0.45; cursor: not-allowed; }
+
 /* Buttons */
 .btn {
   height: 40px; padding: 0 16px; border-radius: 10px;
